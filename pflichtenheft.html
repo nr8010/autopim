@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="de" class="scroll-smooth">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Pflichtenheft – Automotive Aftermarket PIM mit KI</title>
+  <meta name="description" content="Komplettes Pflichtenheft für ein Automotive Aftermarket PIM mit KI-Unterstützung, REST-API, TecDoc/TAF/IDP, BOM, Explosionszeichnungen, Mobile App mit EAN-Scanner und mehr."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+          colors: {
+            brand: {
+              50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a'
+            }
+          },
+          boxShadow: {
+            soft: '0 10px 25px -10px rgba(0,0,0,.25)'
+          }
+        }
+      },
+      darkMode: ['class', '[data-theme="dark"]']
+    }
+  </script>
+  <style>
+    /* Print-friendly */
+    @media print {
+      #app-nav, #toolbar, .shadow-soft { display: none !important; }
+      .print-break { page-break-before: always; }
+      body { font-size: 11pt; }
+    }
+    ::selection{ background:#2563eb22 }
+    .section-card{ backdrop-filter: saturate(120%) blur(3px) }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- Toolbar -->
+<header id="toolbar" class="sticky top-0 z-40 border-b border-slate-200/60 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+    <button id="menuBtn" class="md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Menü umschalten">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded-xl bg-brand-600 text-white grid place-items-center font-bold shadow-soft">P</div>
+      <div>
+        <h1 class="text-base sm:text-lg font-semibold">Pflichtenheft – Automotive Aftermarket PIM</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400">KI • TecDoc/TAF/IDP • REST • BOM • Explosionszeichnungen • Mobile</p>
+      </div>
+    </div>
+    <div class="ml-auto flex items-center gap-2">
+      <div class="hidden sm:flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/60 px-2 py-1 rounded-lg">
+        <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="search" type="search" placeholder="Suche in Kapiteln…" class="bg-transparent outline-none text-sm w-48"/>
+      </div>
+      <button id="themeBtn" class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Dark Mode umschalten">
+        <svg id="sun" class="h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0 4a1 1 0 0 1-1-1v-1a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1Zm0-18a1 1 0 0 1-1-1V2a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1ZM4 13H3a1 1 0 1 1 0-2h1a1 1 0 1 1 0 2Zm17 0h-1a1 1 0 1 1 0-2h1a1 1 0 1 1 0 2ZM5.05 19.07a1 1 0 0 1-1.42-1.42l.7-.7a1 1 0 0 1 1.42 1.42l-.7.7Zm13.62-13.64a1 1 0 0 1-1.42-1.42l.7-.7a1 1 0 0 1 1.42 1.42l-.7.7ZM18.95 19.07l-.7-.7a1 1 0 1 1 1.42-1.42l.7.7a1 1 0 1 1-1.42 1.42ZM5.05 4.93l-.7-.7A1 1 0 0 1 5.77 2.8l.7.7A1 1 0 1 1 5.05 4.93Z"/></svg>
+        <svg id="moon" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+      <button id="printBtn" class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800" title="Als PDF drucken">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto grid grid-cols-12 gap-6 px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Sidebar Nav -->
+  <aside id="app-nav" class="col-span-12 md:col-span-3 lg:col-span-2 md:sticky md:top-20 h-fit">
+    <nav class="bg-white/60 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 rounded-2xl p-4 shadow-soft">
+      <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Inhalt</h2>
+      <ul id="toc" class="space-y-1 text-sm">
+        <!-- Dynamisch via JS gefüllt -->
+      </ul>
+      <div class="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-700/50 text-xs text-slate-500">
+        <p>Tip: <span class="font-medium">Strg/⌘+F</span> oder Suche oben.</p>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Content -->
+  <section class="col-span-12 md:col-span-9 lg:col-span-10 space-y-8">
+
+    <!-- Hero -->
+    <section class="relative overflow-hidden rounded-3xl p-8 md:p-12 bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-500 text-white shadow-soft">
+      <div class="relative z-10 max-w-3xl">
+        <h1 class="text-3xl md:text-5xl font-extrabold leading-tight">Pflichtenheft – Automotive Aftermarket PIM mit KI</h1>
+        <p class="mt-3 text-white/90">Vollständige Spezifikation inkl. TecDoc/TAF/IDP, REST-API, BOM, Explosionszeichnungen, Derivaten, Clipboard, Vererbung und Mobile App mit EAN-Scanner.</p>
+        <div class="mt-6 flex flex-wrap gap-2">
+          <span class="px-3 py-1 text-xs rounded-full bg-white/15">API-first</span>
+          <span class="px-3 py-1 text-xs rounded-full bg-white/15">KI-Validierung</span>
+          <span class="px-3 py-1 text-xs rounded-full bg-white/15">TecDoc & ACES/PIES</span>
+          <span class="px-3 py-1 text-xs rounded-full bg-white/15">Mobile Ready</span>
+        </div>
+      </div>
+      <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/10 blur-2xl"></div>
+    </section>
+
+    <!-- Utility badges -->
+    <div class="flex flex-wrap gap-3">
+      <span class="px-3 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200 rounded-full text-xs">Bereit für Ausschreibungen</span>
+      <span class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200 rounded-full text-xs">Print-/PDF-tauglich</span>
+      <span class="px-3 py-1 bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-200 rounded-full text-xs">Dark Mode</span>
+      <span class="px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-100 rounded-full text-xs">Such- & Filterfunktion</span>
+    </div>
+
+    <!-- Section template function: we'll add many sections below -->
+
+    <article id="zielsetzung" class="section-card bg-white/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50 rounded-3xl p-6 md:p-8 shadow-soft">
+      <h2 class="text-2xl font-bold mb-3">1. Zielsetzung</h2>
+      <p>Das System stellt ein zentrales, KI-gestütztes Product Information Management (PIM) für den Automotive Aftermarket bereit. Es konsolidiert, validiert und verteilt alle relevanten Daten: Produkte, Fahrzeuge, Verpackungen, Medien, Lieferanten, Wettbewerber, Sets, Stücklisten, Explosionszeichnungen, individuelle Derivate, Clipboard-Funktionen und mobile App-Funktionalitäten.</p>
+      <ul class="mt-4 grid sm:grid-cols-2 gap-2 text-sm list-disc pl-5">
+        <li>Höchste Datenqualität durch KI-gestützte Validierung</li>
+        <li>Unterstützung aller Standards (TecDoc, TAF, IDP, BMEcat, ACES/PIES, ETIM, eCl@ss)</li>
+        <li>Effizienz durch Automatisierung, Workflows, Bulk-Operationen & Ansichten</li>
+        <li>Mehrwert für Handel, Werkstätten & Endkunden (Visualisierungen, Datenblätter, Scans)</li>
+        <li>Zukunftssicher: API-first, Cloud & On-Premise</li>
+      </ul>
+    </article>
+
+    <!-- 2.x Sections: group into accordions for readability -->
+    <article id="funktionen" class="section-card bg-white/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50 rounded-3xl p-6 md:p-8 shadow-soft">
+      <h2 class="text-2xl font-bold">2. Funktionsbereiche</h2>
+
+      <div class="mt-6 space-y-4" id="accordion">
+
+        <!-- Helper: function-like chunks embedded by repetition -->
+        <section data-title="2.1 Produkt- & Attributverwaltung" id="s-2-1" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold">
+            <span>2.1 Produkt- & Attributverwaltung</span>
+            <svg class="h-4 w-4 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="px-5 pb-5 hidden text-sm leading-relaxed">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Stammdaten (Artikelnummern, Bezeichnungen, EAN, OEM, Maße, Gewichte, Preise)</li>
+              <li>Frei definierbare Attribute & Pflichtfelder je Warengruppe</li>
+              <li>Mehrsprachigkeit & Übersetzungsworkflows</li>
+              <li>Versionierung, Historie, Rollback, Audit-Logs</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.2 Klassifikationen & Standards" id="s-2-2" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.2 Klassifikationen & Standards</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>BMEcat (2005, 2009, 2020)</li>
+              <li>TecDoc TAF Import/Export inkl. Delta-Updates</li>
+              <li>TecDoc IDP Integration</li>
+              <li>ACES/PIES (NAFTA), ETIM, eCl@ss, UNSPSC</li>
+              <li>Custom-Taxonomien</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.3 Hierarchie- & Baumstrukturen" id="s-2-3" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.3 Hierarchie- & Baumstrukturen</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Warengruppe → Produktgruppe → Produkt → Artikel</li>
+              <li>Attribut- & Lifecycle-Vererbung</li>
+              <li>Multi-Zuordnung von Artikeln</li>
+              <li>Rechte & Workflows pro Ebene</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.4 Lifecycle-Management" id="s-2-4" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.4 Lifecycle-Management</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Status: Neu, Aktiv, In Prüfung, Gesperrt, Auslauf, Archiviert</li>
+              <li>Zeitgesteuerte Gültigkeiten</li>
+              <li>Vorgänger-/Nachfolger-Verknüpfungen</li>
+              <li>Alerts bei Statuswechseln</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.5 Verpackungs- & Logistikdaten" id="s-2-5" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.5 Verpackungs- & Logistikdaten</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Mehrstufige Verpackungen (Stück, Karton, Palette)</li>
+              <li>Maße, Gewicht, Volumen, Material, Barcodes (EAN/GTIN/GS1)</li>
+              <li>Gefahrgut- & Lagerattribute</li>
+              <li>Exporte in GS1 XML, EDI; KI-Plausibilitätschecks</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.6 Fahrzeugverwaltung & Verknüpfung" id="s-2-6" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.6 Fahrzeugverwaltung & Verknüpfung</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Fahrzeugdatenbank (Hersteller, Modell, Motorisierung, Baujahr)</li>
+              <li>TecDoc (KTyp/LinkageId), ACES Vehicle-IDs</li>
+              <li>Artikel ↔ Fahrzeug Fitments</li>
+              <li>Suche (Marke/Modell/Baujahr/Motor, KBA, VIN), Coverage-Analysen</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.7 Media Asset Management (MAM)" id="s-2-7" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.7 Media Asset Management (MAM)</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Bilder, Videos, 3D, PDFs, Zertifikate</li>
+              <li>Automatische Derivate (Web/Print)</li>
+              <li>KI: Auto-Tagging, Duplikate, Validierung</li>
+              <li>Versionierung, Lizenzverwaltung, Distribution (Shops, TecDoc DAM, CDN)</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.8 KI-gestützte Funktionen" id="s-2-8" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.8 KI-gestützte Funktionen</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Datenvalidierung & Dublettenprüfung</li>
+              <li>Textgenerierung (Produkt, SEO, Marketing, Anleitungen)</li>
+              <li>Übersetzungen, Bildanalyse, Recommendation</li>
+              <li>Predictive Analytics (Marktpotenziale, Lifecycle)</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.9 Benutzer- & Rollenverwaltung" id="s-2-9" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.9 Benutzer- & Rollenverwaltung</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Rollenmodelle & Feldrechte</li>
+              <li>Mandantenfähigkeit</li>
+              <li>SSO (LDAP/AD/Azure AD), 2FA</li>
+              <li>Delegation & Review</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.10 Workflows & Governance" id="s-2-10" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.10 Workflows & Governance</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Mehrstufige Freigaben & Eskalationen</li>
+              <li>Datenqualitätsregeln</li>
+              <li>Compliance (REACH, RoHS, ECE, TÜV)</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.11 Exporte & Schnittstellen" id="s-2-11" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.11 Exporte & Schnittstellen</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>CSV, Excel, PDF, XML, JSON</li>
+              <li>BMEcat, TecDoc TAF, ACES/PIES</li>
+              <li>REST/GraphQL, Webhooks</li>
+              <li>ERP, E-Commerce, BI Integrationen</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.12 Analyse & Reporting" id="s-2-12" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.12 Analyse & Reporting</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>KPI-Dashboards (DQI, Time-to-Market, Coverage)</li>
+              <li>Heatmaps, Preis- & Wettbewerbsanalysen</li>
+              <li>Sortimentsanalysen, Auditberichte</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.13 Supplier- & Lieferantenmanagement" id="s-2-13" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.13 Supplier- & Lieferantenmanagement</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Stammdaten, Mehrfachlieferanten & Prioritäten</li>
+              <li>Supplier-Portal (Excel, BMEcat, TAF)</li>
+              <li>KI-Mapping, DQ-Score, SLA-Tracking</li>
+              <li>Audit-Logs & Kommunikation</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.14 Wettbewerbs- & Konkurrenzdaten" id="s-2-14" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.14 Wettbewerbs- & Konkurrenzdaten</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Wettbewerberdatenbank & Preislisten</li>
+              <li>Cross-Referenzen</li>
+              <li>Markt-/Preisbeobachtung (Amazon, eBay, TecDoc)</li>
+              <li>KI-Analysen, Alerts</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.15 Stücklisten / BOM-Management" id="s-2-15" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.15 Stücklisten / BOM-Management</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Mehrstufige BOMs (Sets, Kits, Baugruppen)</li>
+              <li>Mengenverwaltung & BOM ↔ Fahrzeug</li>
+              <li>Exporte (BMEcat, TecDoc, Datenblätter)</li>
+              <li>KI-Vorschläge & Fehlererkennung</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.16 Explosionszeichnungen & Illustrationen" id="s-2-16" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.16 Explosionszeichnungen & Illustrationen</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>2D/3D, Hotspots & Interaktion</li>
+              <li>Verknüpfung mit BOM-Komponenten</li>
+              <li>Exporte für Datenblätter & Kataloge</li>
+              <li>KI: Auto-Labeling & Vollständigkeitsprüfung</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.17 Zusatzmodule" id="s-2-17" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.17 Zusatzmodule</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Mobile App (Scanner, Offline-Katalog)</li>
+              <li>AR-/VR-Integration</li>
+              <li>KI-Chatbot</li>
+              <li>Nachhaltigkeitsanalyse, Promotions</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.18 Massenbearbeitung & Exporte" id="s-2-18" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.18 Massenbearbeitung & Exporte</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Bulk-Update, Suchen & Ersetzen, Rollback</li>
+              <li>Excel-/CSV-Export & Re-Import (Validierung)</li>
+              <li>Delta-Exporte</li>
+              <li>Rollenbasierte Ansichten</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.19 Sortierungen & Ansichten" id="s-2-19" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.19 Sortierungen & Ansichten</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Basis & erweiterte Sortierungen (Preis, DQI, Medienquoten)</li>
+              <li>Benutzerdefiniert & Rollen-Defaults</li>
+              <li>KI-Relevanzsortierung</li>
+              <li>Wirkt auf Exporte</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.20 REST-Schnittstelle & API-Dokumentation" id="s-2-20" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.20 REST-Schnittstelle & API-Dokumentation</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>OpenAPI 3.1; CRUD, Filter, Sort, Projektion</li>
+              <li>Bulk, Async-Jobs, Webhooks</li>
+              <li>TecDoc/TAF/IDP, ACES/PIES</li>
+              <li>Auth: OAuth2/JWT, API-Key; Versionierung</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.21 Individuelle Derivate" id="s-2-21" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.21 Individuelle Derivate</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Medien-Presets je Kanal (Format, DPI, Cropping, Branding, Overlays)</li>
+              <li>Dokument-Derivate (Datenblätter, Preislisten, Kataloge)</li>
+              <li>Daten-Derivate (computed attributes, SEO, Einheiten)</li>
+              <li>Governance, Preset-Versionierung, Monitoring</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.22 Clipboard & Verknüpfungen" id="s-2-22" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.22 Clipboard & Verknüpfungen</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Persönliche Clipboards (mehrere Listen, Sharing)</li>
+              <li>Bulk-Operationen, Exporte, Workflows, Vergleiche</li>
+              <li>Relations-Engine (Produkt ↔ Medien/Fahrzeuge/Supplier/Wettbewerb/Dokumente)</li>
+              <li>Graph-Ansicht, Metadaten je Relation</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.23 Vererbungs- & Abhängigkeitsmanagement" id="s-2-23" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.23 Vererbungs- & Abhängigkeitsmanagement</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Attribut-, Medien-, Fahrzeug- & BOM-Vererbung</li>
+              <li>Überschreiben mit Markierung, Herkunftsanzeige</li>
+              <li>Konfliktwarnungen & DQ-Reports</li>
+              <li>API: <code>?inherit=true|false</code>, Trace-Endpunkte</li>
+            </ul>
+          </div>
+        </section>
+
+        <section data-title="2.24 Mobile App & EAN-/Barcode-Scanner" id="s-2-24" class="border border-slate-200/60 dark:border-slate-700/50 rounded-2xl">
+          <button class="w-full flex items-center justify-between px-4 py-3 text-left font-semibold"><span>2.24 Mobile App & EAN-/Barcode-Scanner</span><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="px-5 pb-5 hidden text-sm">
+            <ul class="list-disc pl-5 grid lg:grid-cols-2 gap-2">
+              <li>Sofort-/Batch-Scan, GS1-Parsing, VIN/KBA-Unterstützung</li>
+              <li>Offline-Cache & Delta-Sync, Device-Binding, MDM</li>
+              <li>Quick Actions (Preis/Status), Mobile Uploads (MAM)</li>
+              <li>APIs: /barcodes/*, /scan/events, /documents/datasheets</li>
+            </ul>
+          </div>
+        </section>
+
+      </div>
+    </article>
+
+    <article id="nfa" class="section-card bg-white/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50 rounded-3xl p-6 md:p-8 shadow-soft">
+      <h2 class="text-2xl font-bold mb-3">3. Nicht-funktionale Anforderungen</h2>
+      <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm list-disc pl-5">
+        <li>Architektur: API-first, Microservices, Docker/Kubernetes</li>
+        <li>Skalierbarkeit: Millionen Artikel, Mandantenfähigkeit</li>
+        <li>Performance: &lt;1 s Standardsuche, &lt;500 ms Barcode-Resolve</li>
+        <li>Sicherheit: DSGVO, Verschlüsselung, 2FA, Audit-Logs</li>
+        <li>UI/UX: Moderne Web- & Mobile-UI, Dark/Light, responsive</li>
+        <li>Internationalisierung: Vollständige Mehrsprachigkeit</li>
+      </ul>
+    </article>
+
+    <article id="nutzen" class="section-card bg-white/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50 rounded-3xl p-6 md:p-8 shadow-soft">
+      <h2 class="text-2xl font-bold mb-3">4. Zielnutzen</h2>
+      <ul class="grid sm:grid-cols-2 gap-2 text-sm list-disc pl-5">
+        <li>Beschleunigte Time-to-Market-Prozesse</li>
+        <li>Höchste Datenqualität dank KI, Vererbung & DQ-Prüfungen</li>
+        <li>Omnichannel-Publishing (Handel, Marktplätze, OEMs)</li>
+        <li>Compliance-Sicherheit (rechtliche & normative Vorgaben)</li>
+        <li>Mobiler Mehrwert: Scans, Außendienst, Datenblätter on-the-go</li>
+        <li>Zukunftssicherheit: Offene Schnittstellen, Microservices & KI</li>
+      </ul>
+    </article>
+
+    <footer class="text-xs text-slate-500 dark:text-slate-400 pt-8 pb-4">
+      <p>© 2025 Automotive PIM Pflichtenheft • Version "Endversion" • Design: Tailwind UI Custom</p>
+    </footer>
+
+  </section>
+</main>
+
+<script>
+  // Theme toggle with localStorage
+  const themeBtn = document.getElementById('themeBtn');
+  const sunIcon = document.getElementById('sun');
+  const moonIcon = document.getElementById('moon');
+  function applyTheme(dark){
+    document.documentElement.classList.toggle('dark', dark);
+    sunIcon.classList.toggle('hidden', !dark);
+    moonIcon.classList.toggle('hidden', dark);
+    localStorage.setItem('pim-theme', dark ? 'dark' : 'light');
+  }
+  applyTheme(localStorage.getItem('pim-theme') === 'dark');
+  themeBtn.addEventListener('click', ()=>applyTheme(!document.documentElement.classList.contains('dark')));
+
+  // Mobile menu
+  const menuBtn = document.getElementById('menuBtn');
+  const nav = document.getElementById('app-nav');
+  menuBtn?.addEventListener('click', ()=> nav.classList.toggle('hidden'));
+
+  // Accordion
+  const items = document.querySelectorAll('#accordion > section');
+  items.forEach(sec=>{
+    const btn = sec.querySelector('button');
+    const body = sec.querySelector('div');
+    btn.addEventListener('click', ()=>{
+      body.classList.toggle('hidden');
+      btn.querySelector('svg').classList.toggle('rotate-180');
+    });
+  });
+
+  // Build TOC
+  const toc = document.getElementById('toc');
+  const sections = document.querySelectorAll('article[id], #accordion > section');
+  sections.forEach((s)=>{
+    const title = s.dataset.title || s.querySelector('h2')?.innerText;
+    if(!title) return;
+    const id = s.id || s.getAttribute('id');
+    if(!id) return;
+    const li = document.createElement('li');
+    li.innerHTML = `<a href="#${id}" class="block px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800">${title}</a>`;
+    toc.appendChild(li);
+  });
+
+  // Search filter over sections titles & content
+  const search = document.getElementById('search');
+  function normalize(t){ return (t||'').toLowerCase(); }
+  search?.addEventListener('input', (e)=>{
+    const q = normalize(e.target.value);
+    const cards = document.querySelectorAll('.section-card');
+    cards.forEach(card=>{
+      const text = normalize(card.innerText);
+      card.style.display = text.includes(q) ? '' : 'none';
+    });
+    const acc = document.querySelectorAll('#accordion > section');
+    acc.forEach(sec=>{
+      const text = normalize(sec.innerText);
+      sec.style.display = text.includes(q) ? '' : 'none';
+    });
+  });
+
+  // Print
+  document.getElementById('printBtn')?.addEventListener('click', ()=>window.print());
+</script>
+</body>
+</html>
