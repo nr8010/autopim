@@ -1,465 +1,502 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Automotive PIM – Prototype</title>
-  <style>
-    :root {
-      --bg: #0f172a;          /* slate-900 */
-      --panel: #111827;       /* gray-900 */
-      --muted: #1f2937;       /* gray-800 */
-      --text: #e5e7eb;        /* gray-200 */
-      --text-dim: #9ca3af;    /* gray-400 */
-      --brand: #22d3ee;       /* cyan-400 */
-      --accent: #a78bfa;      /* violet-400 */
-      --ok: #34d399;          /* emerald-400 */
-      --warn: #fbbf24;        /* amber-400 */
-      --err: #fb7185;         /* rose-400 */
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-      --radius: 18px;
-    }
-    [data-theme="light"]{
-      --bg: #f8fafc;          /* slate-50 */
-      --panel: #ffffff;       /* white */
-      --muted: #f1f5f9;       /* slate-100 */
-      --text: #0f172a;        /* slate-900 */
-      --text-dim: #475569;    /* slate-600 */
-      --shadow: 0 8px 24px rgba(2,6,23,.08);
-    }
-    * { box-sizing: border-box }
-    html, body { height: 100% }
-    body {
-      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-      Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji; background: var(--bg);
-      color: var(--text);
-    }
-    .app { display: grid; grid-template-columns: 280px 1fr; grid-template-rows: 64px 1fr; height: 100%; }
-    header { grid-column: 1 / -1; display:flex; align-items:center; gap:16px; padding: 12px 16px; background: transparent; }
-    .logo { display:flex; align-items:center; gap:10px; font-weight:700; }
-    .logo svg { width: 28px; height: 28px }
-    .topbar { margin-left:auto; display:flex; gap:12px; align-items:center }
-    .btn { background: var(--muted); color: var(--text); border: 1px solid rgba(255,255,255,.06); padding: 10px 14px; border-radius: 12px; cursor: pointer; transition:.2s; }
-    .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
-    .btn.primary { background: linear-gradient(135deg, var(--brand), var(--accent)); color:#000; border: none }
-    .badge { padding: 3px 8px; border-radius: 999px; font-size: 12px; background: var(--muted); color: var(--text-dim) }
+import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Bell,
+  Boxes,
+  Car,
+  ChevronRight,
+  Clipboard,
+  Database,
+  Download,
+  Filter,
+  Globe2,
+  Image as ImageIcon,
+  Menu,
+  Moon,
+  Plus,
+  Search,
+  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sun,
+  Upload,
+  Wand2,
+  BarChart3,
+  LineChart,
+} from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart as RLineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  BarChart as RBarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
-    aside { background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)); border-right: 1px solid rgba(255,255,255,.06); padding: 14px; }
-    .nav h4 { margin:14px 8px; color: var(--text-dim); font-weight:600; font-size:12px; letter-spacing:.08em; text-transform:uppercase }
-    .nav a { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius: 12px; color: var(--text); text-decoration:none; border:1px solid transparent }
-    .nav a:hover { background: var(--muted); border-color: rgba(255,255,255,.06) }
-    .nav a.active { background: var(--panel); border-color: rgba(255,255,255,.12) }
+// --- Demo Data ---
+const dqTrend = [
+  { name: "Mo", value: 86 },
+  { name: "Di", value: 87 },
+  { name: "Mi", value: 88 },
+  { name: "Do", value: 90 },
+  { name: "Fr", value: 92 },
+  { name: "Sa", value: 91 },
+  { name: "So", value: 92 },
+];
 
-    main { padding: 18px; overflow:auto }
-    .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap: 16px }
-    .card { background: var(--panel); border:1px solid rgba(255,255,255,.06); border-radius: var(--radius); box-shadow: var(--shadow); }
-    .card .content { padding: 16px }
-    .kpi { display:flex; align-items:center; justify-content:space-between }
-    .kpi h2 { margin:0; font-size: 14px; color: var(--text-dim); font-weight:600 }
-    .kpi .value { font-size:26px; font-weight:800 }
+const coverage = [
+  { name: "EU", value: 62 },
+  { name: "NA", value: 48 },
+  { name: "APAC", value: 37 },
+  { name: "LATAM", value: 28 },
+];
 
-    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom: 10px }
-    input[type="text"], select { background: var(--muted); color: var(--text);
-      border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 10px 12px; outline:none; }
-    input[type="file"]{ color: var(--text-dim) }
+const tasks = [
+  { id: "P-100234", title: "Bremsbelag-Set DE Übersetzen", status: "In Prüfung", dq: 74 },
+  { id: "P-100512", title: "Ölfilter A123 – Medien ergänzen", status: "Neu", dq: 41 },
+  { id: "P-100990", title: "Stoßdämpfer – ACES Mapping", status: "Aktiv", dq: 92 },
+  { id: "P-101144", title: "Kühler – Verpackungsdaten GS1", status: "In Prüfung", dq: 68 },
+];
 
-    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: var(--radius) }
-    thead { background: rgba(255,255,255,.03) }
-    th, td { text-align:left; padding: 12px 10px; border-bottom: 1px dashed rgba(255,255,255,.06) }
-    tbody tr:hover { background: rgba(255,255,255,.03) }
-    .status { font-size:12px; padding: 4px 8px; border-radius: 999px; }
-    .s-ok{ background: rgba(52,211,153,.15); color: var(--ok) }
-    .s-warn{ background: rgba(251,191,36,.15); color: var(--warn) }
-    .s-err{ background: rgba(251,113,133,.15); color: var(--err) }
+const statusToBadge = (s: string) =>
+  ({
+    Neu: "bg-blue-100 text-blue-800",
+    Aktiv: "bg-green-100 text-green-800",
+    "In Prüfung": "bg-yellow-100 text-yellow-800",
+    Gesperrt: "bg-red-100 text-red-800",
+  } as const)[s] || "bg-gray-100 text-gray-800";
 
-    .footer { display:flex; justify-content:space-between; align-items:center; color: var(--text-dim); font-size: 12px; margin-top: 16px }
-
-    dialog { border:none; border-radius: 16px; padding:0; background: var(--panel); color: var(--text); box-shadow: var(--shadow); width: min(720px, 92vw) }
-    dialog::backdrop{ background: rgba(2,6,23,.6) }
-    .modal-header{ display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.06) }
-    .modal-body{ padding:16px; display:grid; gap:12px }
-    .modal-actions{ display:flex; justify-content:flex-end; gap:10px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,.06) }
-    .row{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px }
-    .row-3{ display:grid; grid-template-columns: repeat(3,1fr); gap:12px }
-    .field label{ display:block; font-size:12px; color: var(--text-dim); margin-bottom:6px }
-    .field input, .field select, .field textarea { width:100%; padding:10px 12px; border-radius: 12px; border:1px solid rgba(255,255,255,.08); background: var(--muted); color: var(--text) }
-    .field small{ color: var(--text-dim) }
-
-    /* Responsiveness */
-    @media (max-width: 1024px){ .app { grid-template-columns: 80px 1fr } .nav span.txt{ display:none } }
-    @media (max-width: 720px){ header{ flex-wrap:wrap } .row, .row-3{ grid-template-columns:1fr } .toolbar{ flex-direction:column; align-items:stretch } }
-  </style>
-</head>
-<body>
-<div id="root" class="app" data-theme="dark">
-  <header>
-    <div class="logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M3 12h4l2 3h6l2-3h4"/>
-        <circle cx="12" cy="18" r="3"/>
-        <circle cx="6" cy="18" r="2"/>
-        <circle cx="18" cy="18" r="2"/>
-      </svg>
-      <span>Automotive PIM</span>
-      <span class="badge" id="envBadge">Demo</span>
-    </div>
-
-    <div class="topbar">
-      <input id="q" type="text" placeholder="Suche nach Produkt, OEM, EAN…" />
-      <button class="btn" id="btnLang">DE</button>
-      <button class="btn" id="btnTheme">Dark</button>
-      <button class="btn primary" id="btnNew">+ Neues Produkt</button>
-    </div>
-  </header>
-
-  <aside>
-    <nav class="nav">
-      <h4>Navigation</h4>
-      <a href="#" class="active" data-section="dashboard">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"/></svg>
-        <span class="txt">Dashboard</span>
-      </a>
-      <a href="#" data-section="products">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/></svg>
-        <span class="txt">Produkte</span>
-      </a>
-      <a href="#" data-section="media">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h18v14H3z"/><path d="M3 15l5-5 4 4 3-3 4 4"/></svg>
-        <span class="txt">Medien</span>
-      </a>
-      <a href="#" data-section="exports">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 21h14"/></svg>
-        <span class="txt">Exporte</span>
-      </a>
-      <a href="#" data-section="settings">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 3.3l.06.06c.47.47 1.14.65 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09c0 .68.26 1.35.73 1.82l.06.06a2 2 0 1 1 2.83 2.83l-.06.06c-.47.47-.65 1.14-.33 1.82V10c.68 0 1.35.26 1.82.73l.06.06A2 2 0 1 1 20.7 16.7l-.06-.06a1.65 1.65 0 0 0-1.24-.64z"/></svg>
-        <span class="txt">Einstellungen</span>
-      </a>
-    </nav>
-  </aside>
-
-  <main>
-    <!-- KPIs -->
-    <div class="grid" style="margin-bottom: 12px">
-      <div class="card" style="grid-column: span 3">
-        <div class="content kpi"><h2>Produkte</h2><div class="value" id="kpiProducts">1 248</div></div>
-      </div>
-      <div class="card" style="grid-column: span 3">
-        <div class="content kpi"><h2>Medien</h2><div class="value" id="kpiMedia">5 973</div></div>
-      </div>
-      <div class="card" style="grid-column: span 3">
-        <div class="content kpi"><h2>Datenqualität</h2><div class="value" id="kpiDQ">92%</div></div>
-      </div>
-      <div class="card" style="grid-column: span 3">
-        <div class="content kpi"><h2>Offene Prüfungen</h2><div class="value" id="kpiOpen">17</div></div>
-      </div>
-    </div>
-
-    <!-- Toolbar -->
-    <div class="card" style="margin-bottom: 12px">
-      <div class="content">
-        <div class="toolbar">
-          <input id="filterText" type="text" placeholder="Filter: Artikelnummer / Bezeichnung / OEM…" />
-          <select id="selBrand"><option value="">Marke (alle)</option><option>ACME</option><option>FastParts</option><option>Headline</option></select>
-          <select id="selStatus"><option value="">Status (alle)</option><option>Aktiv</option><option>In Prüfung</option><option>Gesperrt</option></select>
-          <button class="btn" id="btnAudit">Audit Log</button>
-          <button class="btn" id="btnImport">Import</button>
-          <button class="btn" id="btnExport">Export</button>
-        </div>
-
-        <div style="overflow:auto">
-          <table id="tbl">
-            <thead>
-              <tr>
-                <th style="width: 130px">Artikel</th>
-                <th>Bezeichnung</th>
-                <th style="width: 110px">Marke</th>
-                <th style="width: 160px">TecDoc</th>
-                <th style="width: 140px">Preis (€)</th>
-                <th style="width: 110px">Status</th>
-                <th style="width: 120px">Aktionen</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <div class="footer">
-          <span id="rowCount">0 Einträge</span>
-          <div>
-            <span>Seite</span>
-            <select id="selPage"></select>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Media Upload -->
-    <div class="card">
-      <div class="content">
-        <h3 style="margin-top:0">Medienverwaltung</h3>
-        <div class="row">
-          <div class="field">
-            <label>Datei hochladen</label>
-            <input id="fileInput" type="file" multiple accept="image/*" />
-            <small>Hinweis: Bilder werden anhand des Dateinamens automatisch Produkten zugeordnet (z. B. <code>12345_front.jpg</code> → Artikel 12345).</small>
-          </div>
-          <div>
-            <button class="btn" id="btnProcess">Dateien verarbeiten</button>
-          </div>
-        </div>
-        <div id="uploadLog" style="margin-top:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; color: var(--text-dim)"></div>
-      </div>
-    </div>
-  </main>
-</div>
-
-<!-- MODALS -->
-<dialog id="modalNew">
-  <div class="modal-header">
-    <strong>Neues Produkt anlegen</strong>
-    <button class="btn" onclick="closeDialog('modalNew')">×</button>
-  </div>
-  <div class="modal-body">
-    <div class="row">
-      <div class="field"><label>Artikelnummer</label><input id="mSku" placeholder="z. B. 12345" /></div>
-      <div class="field"><label>Marke</label>
-        <select id="mBrand"><option>ACME</option><option>FastParts</option><option>Headline</option></select>
-      </div>
-    </div>
-    <div class="field"><label>Bezeichnung (DE)</label><input id="mNameDE" placeholder="z. B. Bremsbelag-Satz VA" /></div>
-    <div class="field"><label>Bezeichnung (EN)</label><input id="mNameEN" placeholder="e.g. Brake pad set, front" /></div>
-    <div class="row-3">
-      <div class="field"><label>EAN</label><input id="mEan" placeholder="z. B. 4021234567890" /></div>
-      <div class="field"><label>Preis (€)</label><input id="mPrice" type="number" step="0.01" placeholder="0.00" /></div>
-      <div class="field"><label>Status</label><select id="mStatus"><option>Aktiv</option><option>In Prüfung</option><option>Gesperrt</option></select></div>
-    </div>
-    <div class="field"><label>TecDoc Verknüpfung</label><input id="mTecdoc" placeholder="KTyp / LinkageId / MFR-Model" /></div>
-    <div class="field"><label>Beschreibung</label><textarea id="mDesc" rows="3" placeholder="Kurzbeschreibung, Material, Einbauhinweise…"></textarea></div>
-  </div>
-  <div class="modal-actions">
-    <button class="btn" onclick="closeDialog('modalNew')">Abbrechen</button>
-    <button class="btn primary" onclick="createProduct()">Anlegen</button>
-  </div>
-</dialog>
-
-<dialog id="modalExport">
-  <div class="modal-header">
-    <strong>Export</strong>
-    <button class="btn" onclick="closeDialog('modalExport')">×</button>
-  </div>
-  <div class="modal-body">
-    <div class="row-3">
-      <div class="field"><label>Format</label>
-        <select id="exFormat"><option value="csv">CSV</option><option value="xlsx">Excel</option><option value="pdf">PDF</option><option value="taf">TecDoc TAF</option><option value="bmecat">BMEcat</option></select>
-      </div>
-      <div class="field"><label>Sprache</label>
-        <select id="exLang"><option>DE</option><option>EN</option><option>FR</option><option>IT</option><option>ZH</option></select>
-      </div>
-      <div class="field"><label>Umfang</label>
-        <select id="exScope"><option value="all">Alle Produkte</option><option value="filtered">Gefilterte Ansicht</option><option value="changed">Seit letztem Export geändert</option></select>
-      </div>
-    </div>
-    <div class="field"><label>Bemerkung</label><input id="exNote" placeholder="z. B. Preisupdate Q3" /></div>
-  </div>
-  <div class="modal-actions">
-    <button class="btn" onclick="closeDialog('modalExport')">Schließen</button>
-    <button class="btn primary" onclick="fakeExport()">Export starten</button>
-  </div>
-</dialog>
-
-<script>
-  // --- State ---
-  const state = {
-    theme: localStorage.getItem('pim_theme') || 'dark',
-    lang: localStorage.getItem('pim_lang') || 'DE',
-    pageSize: 8,
-    products: generateSeed(57)
+// --- Helper: Theme toggle with persistence & system-pref ---
+function useTheme() {
+  const getInitial = () => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("theme");
+    if (stored === "dark") return true;
+    if (stored === "light") return false;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   };
+  const [dark, setDark] = useState<boolean>(getInitial);
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
+  return { dark, setDark } as const;
+}
 
-  // --- Init ---
-  const root = document.getElementById('root');
-  root.setAttribute('data-theme', state.theme);
-  document.getElementById('btnTheme').textContent = state.theme === 'dark' ? 'Dark' : 'Light';
-  document.getElementById('btnLang').textContent = state.lang;
+export default function PIMDashboardPro() {
+  const { dark, setDark } = useTheme();
 
-  const tbody = document.querySelector('#tbl tbody');
-  const selPage = document.getElementById('selPage');
-  const filterText = document.getElementById('filterText');
-  const selBrand = document.getElementById('selBrand');
-  const selStatus = document.getElementById('selStatus');
+  const dqAvg = useMemo(
+    () => Math.round(dqTrend.reduce((a, b) => a + b.value, 0) / dqTrend.length),
+    []
+  );
 
-  function applyFilters(){
-    const f = filterText.value.toLowerCase();
-    const b = selBrand.value;
-    const s = selStatus.value;
-    const filtered = state.products.filter(p => {
-      const textMatch = !f || [p.sku, p.nameDE, p.oem, p.ean].some(x => (x+"").toLowerCase().includes(f));
-      const brandMatch = !b || p.brand === b;
-      const statusMatch = !s || p.status === s;
-      return textMatch && brandMatch && statusMatch;
-    });
-    renderTable(filtered);
-  }
+  // Mobile nav state (Sheet)
+  const [navOpen, setNavOpen] = useState(false);
 
-  function renderTable(rows){
-    const pages = Math.max(1, Math.ceil(rows.length / state.pageSize));
-    selPage.innerHTML = Array.from({length: pages}, (_,i)=>`<option>${i+1}</option>`).join('');
-    const current = Number(selPage.value || 1) - 1;
-    const start = current * state.pageSize;
-    const view = rows.slice(start, start + state.pageSize);
-    tbody.innerHTML = view.map(tr => `
-      <tr>
-        <td><strong>${tr.sku}</strong><div style="color:var(--text-dim); font-size:12px">${tr.ean}</div></td>
-        <td>${tr.nameDE}<div style="color:var(--text-dim); font-size:12px">OEM: ${tr.oem}</div></td>
-        <td>${tr.brand}</td>
-        <td>${tr.tecdoc}</td>
-        <td>${tr.price.toFixed(2)}</td>
-        <td><span class="status ${cls(tr.status)}">${tr.status}</span></td>
-        <td>
-          <button class="btn" onclick="edit('${tr.sku}')">Bearbeiten</button>
-          <button class="btn" onclick="del('${tr.sku}')">Löschen</button>
-        </td>
-      </tr>`).join('');
-    document.getElementById('rowCount').textContent = `${rows.length} Einträge`;
-  }
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-slate-900 text-gray-900 dark:text-gray-100">
+      {/* Glass Topbar */}
+      <div className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 border-b border-white/40 dark:border-gray-800">
+        <header className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-3 flex items-center gap-2 sm:gap-4">
+          {/* Mobile: menu button */}
+          <Sheet open={navOpen} onOpenChange={setNavOpen}>
+            <SheetTrigger asChild>
+              <Button aria-label="Menü" variant="ghost" size="icon" className="rounded-xl md:hidden">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[92vw] sm:w-[400px] p-0">
+              {/* Drawer content mirrors sidebar */}
+              <div className="p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center shadow-md">
+                    <Wand2 className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold leading-tight">Automotive PIM</h2>
+                    <p className="text-xs text-muted-foreground">Navigation</p>
+                  </div>
+                </div>
+                <Separator />
+                {[
+                  { label: "Dashboard", icon: BarChart3 },
+                  { label: "Produkte", icon: Boxes },
+                  { label: "Fahrzeuge", icon: Car },
+                  { label: "Medien", icon: ImageIcon },
+                  { label: "Lieferanten", icon: Globe2 },
+                  { label: "Datenhub", icon: Database },
+                  { label: "Compliance", icon: ShieldCheck },
+                ].map((i) => (
+                  <Button key={i.label} variant="ghost" className="justify-start rounded-xl w-full">
+                    <i.icon className="h-4 w-4 mr-2" /> {i.label}
+                  </Button>
+                ))}
+                <div className="pt-2">
+                  <Button className="justify-start rounded-xl w-full" variant="secondary">
+                    <Plus className="h-4 w-4 mr-2" /> Neuer Artikel
+                  </Button>
+                </div>
+                <div className="pt-2">
+                  <Card className="rounded-2xl border-none bg-gradient-to-br from-teal-500 to-cyan-500 text-white overflow-hidden">
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        Quick Actions <ChevronRight className="h-4 w-4 opacity-80" />
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-2">
+                      <Button variant="secondary" className="rounded-xl bg-white/20 border-white/20 hover:bg-white/30"><Upload className="h-4 w-4 mr-2" /> Import (TAF/BMEcat)</Button>
+                      <Button variant="secondary" className="rounded-xl bg-white/20 border-white/20 hover:bg-white/30"><Download className="h-4 w-4 mr-2" /> Export Presets</Button>
+                      <Button variant="secondary" className="rounded-xl bg-white/20 border-white/20 hover:bg-white/30"><Wand2 className="h-4 w-4 mr-2" /> KI-Validierung</Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
 
-  function cls(s){ return s === 'Aktiv' ? 's-ok' : s === 'In Prüfung' ? 's-warn' : 's-err' }
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 flex-1">
+            <div className="hidden md:flex h-9 w-9 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 md:flex items-center justify-center shadow-md">
+              <Wand2 className="h-5 w-5 text-white" />
+            </div>
+            <div className="hidden md:block">
+              <h1 className="font-semibold leading-tight">Automotive PIM</h1>
+              <p className="text-xs text-muted-foreground">KI-Validierung · Multi-Tenant · API-first</p>
+            </div>
+            <div className="flex items-center gap-2 ml-0 sm:ml-2 p-1 rounded-xl bg-white/60 dark:bg-gray-800/60 border border-white/40 dark:border-gray-700 shadow-sm w-full max-w-[520px]">
+              <Search className="w-4 h-4 ml-2 text-muted-foreground" />
+              <Input aria-label="Suche" placeholder="Suche Produkte, Fahrzeuge, Medien…" className="h-8 border-0 bg-transparent focus-visible:ring-0 text-sm flex-1" />
+              <kbd className="mr-2 hidden sm:inline text-[10px] px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700">Ctrl K</kbd>
+            </div>
+          </motion.div>
 
-  // Seed data
-  function generateSeed(n){
-    const brands = ['ACME', 'FastParts', 'Headline'];
-    const statuses = ['Aktiv', 'In Prüfung', 'Gesperrt'];
-    const out = [];
-    for(let i=0;i<n;i++){
-      const sku = String(12000 + i);
-      out.push({
-        sku,
-        nameDE: `Bremsbelag-Satz ${i%2? 'VA':'HA'}`,
-        ean: `40212${(100000 + i).toString()}`,
-        oem: `OE${1000+i}`,
-        tecdoc: `KTyp ${5000+i}`,
-        brand: brands[i%brands.length],
-        price: 9.9 + (i%13)*2.35,
-        status: statuses[i%statuses.length]
-      });
-    }
-    return out;
-  }
+          <div className="flex items-center gap-1 sm:gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button aria-label="Ansicht" variant="ghost" size="icon" className="rounded-xl"><SlidersHorizontal className="h-5 w-5" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Ansicht</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked>Komfort-Dichte</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem>Kompakte Tabellen</DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button aria-label="Benachrichtigungen" variant="ghost" size="icon" className="rounded-xl"><Bell className="h-5 w-5" /></Button>
+            <Button aria-label="Einstellungen" variant="ghost" size="icon" className="rounded-xl"><Settings className="h-5 w-5" /></Button>
+            <Button aria-label="Theme umschalten" variant="ghost" size="icon" className="rounded-xl" onClick={() => setDark(!dark)}>
+              {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+          </div>
+        </header>
+      </div>
 
-  // Navigation
-  document.querySelectorAll('aside .nav a').forEach(a=>{
-    a.addEventListener('click', e=>{
-      e.preventDefault();
-      document.querySelectorAll('aside .nav a').forEach(x=>x.classList.remove('active'));
-      a.classList.add('active');
-      const sec = a.dataset.section;
-      alert(`Sektion "${sec}" – Platzhalter in dieser Demo.`)
-    })
-  })
+      {/* Layout */}
+      <div className="max-w-7xl mx-auto grid grid-cols-12 gap-4 sm:gap-6 px-3 sm:px-6 pb-24 sm:pb-10 pt-4 sm:pt-6">
+        {/* Sidebar (hidden on mobile, available in drawer) */}
+        <aside className="hidden md:block col-span-12 md:col-span-3 xl:col-span-2 space-y-3">
+          <Card className="rounded-2xl border-none bg-white/70 dark:bg-gray-900/70 backdrop-blur shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-sm">Navigation</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2">
+              {[
+                { label: "Dashboard", icon: BarChart3 },
+                { label: "Produkte", icon: Boxes },
+                { label: "Fahrzeuge", icon: Car },
+                { label: "Medien", icon: ImageIcon },
+                { label: "Lieferanten", icon: Globe2 },
+                { label: "Datenhub", icon: Database },
+                { label: "Compliance", icon: ShieldCheck },
+              ].map((i) => (
+                <Button key={i.label} variant="ghost" className="justify-start rounded-xl">
+                  <i.icon className="h-4 w-4 mr-2" /> {i.label}
+                </Button>
+              ))}
+              <Separator className="my-2" />
+              <Button className="justify-start rounded-xl" variant="secondary">
+                <Plus className="h-4 w-4 mr-2" /> Neuer Artikel
+              </Button>
+            </CardContent>
+          </Card>
 
-  // Listeners
-  [filterText, selBrand, selStatus].forEach(el=>el.addEventListener('input', applyFilters));
-  selPage.addEventListener('change', applyFilters);
+          <Card className="rounded-2xl border-none bg-gradient-to-br from-teal-500 to-cyan-500 text-white overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center justify-between">
+                Quick Actions <ChevronRight className="h-4 w-4 opacity-80" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2">
+              <Button variant="secondary" className="rounded-xl bg-white/20 border-white/20 hover:bg-white/30"><Upload className="h-4 w-4 mr-2" /> Import (TAF/BMEcat)</Button>
+              <Button variant="secondary" className="rounded-xl bg-white/20 border-white/20 hover:bg-white/30"><Download className="h-4 w-4 mr-2" /> Export Presets</Button>
+              <Button variant="secondary" className="rounded-xl bg-white/20 border-white/20 hover:bg-white/30"><Wand2 className="h-4 w-4 mr-2" /> KI-Validierung</Button>
+            </CardContent>
+          </Card>
+        </aside>
 
-  document.getElementById('btnTheme').addEventListener('click', ()=>{
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('pim_theme', state.theme);
-    root.setAttribute('data-theme', state.theme);
-    document.getElementById('btnTheme').textContent = state.theme === 'dark' ? 'Dark' : 'Light';
-  })
+        {/* Main */}
+        <section className="col-span-12 md:col-span-9 xl:col-span-10 space-y-4 sm:space-y-6">
+          {/* Hero KPI strip */}
+          <div className="grid grid-cols-12 gap-4">
+            {[
+              { title: "Datenqualität", value: `${dqAvg}%`, sub: "+2% vs. Vorwoche" },
+              { title: "Artikel gesamt", value: "1.245.320", sub: "+12k neu" },
+              { title: "Offene Freigaben", value: "38", sub: "5 überfällig" },
+              { title: "Exporte 24h", value: "112", sub: "12 Partner" },
+            ].map((kpi, idx) => (
+              <motion.div
+                key={kpi.title}
+                className="col-span-12 sm:col-span-6 lg:col-span-3"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 * idx }}
+              >
+                <Card className="rounded-2xl border-none bg-white/70 dark:bg-gray-900/70 backdrop-blur shadow-sm hover:shadow-md">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{kpi.title}</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="text-3xl sm:text-4xl font-semibold tracking-tight">{kpi.value}</div>
+                    <p className="text-xs text-muted-foreground mt-1">{kpi.sub}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
 
-  document.getElementById('btnLang').addEventListener('click', ()=>{
-    const langs = ['DE','EN','FR','IT','ZH'];
-    const idx = langs.indexOf(state.lang);
-    state.lang = langs[(idx+1)%langs.length];
-    localStorage.setItem('pim_lang', state.lang);
-    document.getElementById('btnLang').textContent = state.lang;
-  })
+          {/* Charts Row */}
+          <div className="grid grid-cols-12 gap-4 sm:gap-6">
+            <Card className="col-span-12 lg:col-span-7 rounded-2xl border-none bg-white/70 dark:bg-gray-900/70 backdrop-blur shadow-sm">
+              <CardHeader className="pb-0"><CardTitle className="text-sm">DQ-Trend (7 Tage)</CardTitle></CardHeader>
+              <CardContent className="h-56 sm:h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RLineChart data={dqTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[60, 100]} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="value" strokeWidth={3} dot={{ r: 3 }} />
+                  </RLineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
-  document.getElementById('btnNew').addEventListener('click', ()=> openDialog('modalNew'));
-  document.getElementById('btnExport').addEventListener('click', ()=> openDialog('modalExport'));
-  document.getElementById('btnImport').addEventListener('click', ()=> alert('Importer: CSV, Excel, TAF (TecDoc), BMEcat – Platzhalter.'));
-  document.getElementById('btnAudit').addEventListener('click', ()=> alert('Audit Log – Platzhalter in dieser Demo.'));
+            <Card className="col-span-12 lg:col-span-5 rounded-2xl border-none bg-white/70 dark:bg-gray-900/70 backdrop-blur shadow-sm">
+              <CardHeader className="pb-0"><CardTitle className="text-sm">Coverage nach Region</CardTitle></CardHeader>
+              <CardContent className="h-56 sm:h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RBarChart data={coverage} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+                  </RBarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
 
-  // File processing demo (auto-link images to products via filename)
-  document.getElementById('btnProcess').addEventListener('click', ()=>{
-    const files = document.getElementById('fileInput').files;
-    if(!files.length) return toast('Keine Dateien ausgewählt.');
-    const log = [];
-    for(const f of files){
-      const match = /([0-9]{5})/i.exec(f.name);
-      const sku = match ? match[1] : null;
-      if(sku && state.products.some(p=>p.sku===sku)){
-        log.push(`✔ ${f.name} → Artikel ${sku}`)
-      } else {
-        log.push(`✖ ${f.name} → kein passender Artikel`)
-      }
-    }
-    document.getElementById('uploadLog').innerText = log.join('\n');
-    toast('Dateien verarbeitet.');
-  })
+          {/* Worklist + Detail */}
+          <Card className="rounded-2xl border-none bg-white/70 dark:bg-gray-900/70 backdrop-blur shadow-sm">
+            <CardHeader className="pb-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <CardTitle className="text-sm">Meine Aufgaben</CardTitle>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="rounded-xl"><Filter className="h-4 w-4 mr-2" />Filter</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Status</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {["Neu", "In Prüfung", "Aktiv", "Gesperrt"].map((s) => (
+                        <DropdownMenuItem key={s}>{s}</DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button size="sm" className="rounded-xl"><Clipboard className="h-4 w-4 mr-2" />In Clipboard</Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Responsive list header */}
+              <div className="hidden sm:grid grid-cols-12 gap-3 text-sm">
+                <div className="col-span-3 font-medium text-muted-foreground">ID</div>
+                <div className="col-span-5 font-medium text-muted-foreground">Titel</div>
+                <div className="col-span-2 font-medium text-muted-foreground">Status</div>
+                <div className="col-span-2 font-medium text-muted-foreground">DQ</div>
+                <Separator className="col-span-12 my-1" />
+                {tasks.map((t) => (
+                  <React.Fragment key={t.id}>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <Badge variant="outline" className="rounded-lg">{t.id}</Badge>
+                    </div>
+                    <div className="col-span-5 flex items-center justify-between">
+                      <div>{t.title}</div>
+                      <Sheet>
+                        <SheetTrigger asChild>
+                          <Button variant="ghost" size="sm" className="rounded-xl">Details <ChevronRight className="h-4 w-4 ml-1" /></Button>
+                        </SheetTrigger>
+                        <SheetContent className="sm:max-w-xl">
+                          <SheetHeader>
+                            <SheetTitle>{t.title}</SheetTitle>
+                          </SheetHeader>
+                          <div className="mt-4 space-y-4">
+                            <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-green-500" /><span className="text-sm">Regel-Check: 12/14 bestanden</span></div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Datenqualitäts-Score</p>
+                              <Progress value={t.dq} className="h-2" />
+                              <div className="text-xs mt-1">{t.dq}%</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <Button variant="secondary" className="rounded-xl"><Wand2 className="h-4 w-4 mr-2" /> KI-Autofix</Button>
+                              <Button className="rounded-xl"><Upload className="h-4 w-4 mr-2" /> Medien ergänzen</Button>
+                              <Button variant="outline" className="rounded-xl"><Download className="h-4 w-4 mr-2" /> Datenblatt</Button>
+                              <Button variant="outline" className="rounded-xl"><Globe2 className="h-4 w-4 mr-2" /> TecDoc prüfen</Button>
+                            </div>
+                          </div>
+                        </SheetContent>
+                      </Sheet>
+                    </div>
+                    <div className="col-span-2"><Badge className={`rounded-lg ${statusToBadge(t.status)}`}>{t.status}</Badge></div>
+                    <div className="col-span-2"><Progress value={t.dq} className="h-2" /></div>
+                  </React.Fragment>
+                ))}
+              </div>
 
-  // Modals
-  function openDialog(id){ document.getElementById(id).showModal() }
-  function closeDialog(id){ document.getElementById(id).close() }
-  window.closeDialog = closeDialog;
+              {/* Mobile list */}
+              <div className="sm:hidden space-y-3">
+                {tasks.map((t) => (
+                  <Card key={t.id} className="rounded-2xl border border-gray-200 dark:border-gray-800">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="rounded-lg">{t.id}</Badge>
+                        <Badge className={`rounded-lg ${statusToBadge(t.status)}`}>{t.status}</Badge>
+                      </div>
+                      <div className="mt-2 text-sm">{t.title}</div>
+                      <div className="mt-3">
+                        <Progress value={t.dq} className="h-2" />
+                        <div className="text-xs mt-1">{t.dq}%</div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-end">
+                        <Sheet>
+                          <SheetTrigger asChild>
+                            <Button variant="ghost" size="sm" className="rounded-xl">Details <ChevronRight className="h-4 w-4 ml-1" /></Button>
+                          </SheetTrigger>
+                          <SheetContent className="sm:max-w-xl">
+                            <SheetHeader>
+                              <SheetTitle>{t.title}</SheetTitle>
+                            </SheetHeader>
+                            <div className="mt-4 space-y-4">
+                              <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-green-500" /><span className="text-sm">Regel-Check: 12/14 bestanden</span></div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Datenqualitäts-Score</p>
+                                <Progress value={t.dq} className="h-2" />
+                                <div className="text-xs mt-1">{t.dq}%</div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <Button variant="secondary" className="rounded-xl"><Wand2 className="h-4 w-4 mr-2" /> KI-Autofix</Button>
+                                <Button className="rounded-xl"><Upload className="h-4 w-4 mr-2" /> Medien ergänzen</Button>
+                                <Button variant="outline" className="rounded-xl"><Download className="h-4 w-4 mr-2" /> Datenblatt</Button>
+                                <Button variant="outline" className="rounded-xl"><Globe2 className="h-4 w-4 mr-2" /> TecDoc prüfen</Button>
+                              </div>
+                            </div>
+                          </SheetContent>
+                        </Sheet>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-  function createProduct(){
-    const sku = document.getElementById('mSku').value.trim();
-    if(!sku){ toast('Artikelnummer erforderlich'); return }
-    const prod = {
-      sku,
-      nameDE: document.getElementById('mNameDE').value || '(ohne Titel)',
-      ean: document.getElementById('mEan').value || '-',
-      oem: 'OE' + Math.floor(1000+Math.random()*9000),
-      tecdoc: document.getElementById('mTecdoc').value || '-',
-      brand: document.getElementById('mBrand').value,
-      price: Number(document.getElementById('mPrice').value || 0),
-      status: document.getElementById('mStatus').value
-    };
-    state.products.unshift(prod);
-    applyFilters();
-    closeDialog('modalNew');
-    toast('Produkt angelegt');
-  }
+          {/* Insights */}
+          <div className="grid grid-cols-12 gap-4 sm:gap-6">
+            <Card className="col-span-12 xl:col-span-7 rounded-2xl border-none bg-white/70 dark:bg-gray-900/70 backdrop-blur shadow-sm">
+              <CardHeader className="pb-0"><CardTitle className="text-sm">Partner-Exports (Top 5)</CardTitle></CardHeader>
+              <CardContent className="h-56 sm:h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie dataKey="value" nameKey="name" data={[{ name: "TecDoc", value: 42 }, { name: "Amazon", value: 24 }, { name: "eBay", value: 14 }, { name: "Händler X", value: 12 }, { name: "OEM", value: 8 }]} innerRadius={60} outerRadius={90} paddingAngle={2}>
+                      {["#0ea5e9", "#14b8a6", "#22c55e", "#a78bfa", "#f59e0b"].map((c, i) => (
+                        <Cell key={i} fill={c} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
-  function edit(sku){ toast(`Bearbeiten ${sku} – Platzhalter`) }
-  function del(sku){
-    if(confirm(`Produkt ${sku} löschen?`)){
-      state.products = state.products.filter(p=>p.sku!==sku);
-      applyFilters();
-      toast('Produkt gelöscht');
-    }
-  }
+            <Card className="col-span-12 xl:col-span-5 rounded-2xl border-none bg-white/70 dark:bg-gray-900/70 backdrop-blur shadow-sm">
+              <CardHeader className="pb-0"><CardTitle className="text-sm">Aktivitäten</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-4 text-sm">
+                  {[
+                    { t: "Freigabe abgeschlossen", s: "Produkt P-100880", k: "vor 12 Min" },
+                    { t: "TAF-Import", s: "4.320 Artikel aktualisiert", k: "vor 1 Std" },
+                    { t: "DQ-Regeln", s: "15 Warnungen behoben", k: "gestern" },
+                    { t: "Neue Medien", s: "28 Bilder zugeordnet", k: "gestern" },
+                  ].map((a, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center">
+                        <LineChart className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{a.t}</div>
+                        <div className="text-muted-foreground">{a.s}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{a.k}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      </div>
 
-  function fakeExport(){
-    const fmt = document.getElementById('exFormat').value;
-    const scope = document.getElementById('exScope').value;
-    toast(`Export gestartet: ${fmt.toUpperCase()} (${scope})`);
-    closeDialog('modalExport');
-  }
-
-  // Simple toast
-  let toastTO;
-  function toast(msg){
-    clearTimeout(toastTO);
-    let el = document.getElementById('toast');
-    if(!el){
-      el = document.createElement('div');
-      el.id = 'toast';
-      el.style.position='fixed'; el.style.bottom='20px'; el.style.right='20px';
-      el.style.background='var(--panel)'; el.style.border='1px solid rgba(255,255,255,.12)';
-      el.style.padding='10px 14px'; el.style.borderRadius='12px'; el.style.boxShadow='var(--shadow)';
-      document.body.appendChild(el);
-    }
-    el.textContent = msg;
-    el.style.opacity='1';
-    toastTO = setTimeout(()=> el.style.opacity='0', 2000);
-  }
-
-  // Initial render
-  applyFilters();
-</script>
-</body>
-</html>
+      {/* Mobile Bottom Quick Actions */}
+      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 md:hidden">
+        <div className="rounded-2xl border border-white/40 dark:border-gray-800 bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-xl px-2 py-2 flex items-center gap-2">
+          <Button size="sm" variant="secondary" className="rounded-xl bg-white/20 border-white/20 hover:bg-white/30"><Upload className="h-4 w-4 mr-1" /> Import</Button>
+          <Button size="sm" variant="secondary" className="rounded-xl bg-white/20 border-white/20 hover:bg-white/30"><Download className="h-4 w-4 mr-1" /> Export</Button>
+          <Button size="sm" variant="secondary" className="rounded-xl bg-white/20 border-white/20 hover:bg-white/30"><Wand2 className="h-4 w-4 mr-1" /> KI</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
